@@ -1,0 +1,21 @@
+use crate::EyreResult;
+
+pub(crate) fn parser(input: &str) -> EyreResult<()> {
+	
+}
+
+pub(crate) fn part1(_: ()) -> EyreResult<()> {
+	todo!()
+}
+
+pub(crate) fn part2(_: usize) -> EyreResult<()> {
+	todo!()
+}
+
+pub(crate) fn fmt1(output: ()) -> String {
+	format!("", output)
+}
+
+pub(crate) fn fmt2(output: ()) -> String {
+	format!("", output)
+}
