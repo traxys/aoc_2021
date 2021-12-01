@@ -9,29 +9,7 @@ use harness::{Restart, RunParams};
 
 pub type EyreResult<T, E = color_eyre::Report> = Result<T, E>;
 
-pub(crate) mod day1 {
-    use crate::EyreResult;
-
-    pub(crate) fn parser(_: &str) -> EyreResult<usize> {
-        Ok(1)
-    }
-
-    pub(crate) fn part1(_: usize) -> EyreResult<isize> {
-        Ok(2)
-    }
-
-    pub(crate) fn part2(_: usize) -> EyreResult<u8> {
-        Ok(3)
-    }
-
-    pub(crate) fn fmt1(x: isize) -> String {
-        format!("foo {}", x)
-    }
-
-    pub(crate) fn fmt2(x: u8) -> String {
-        format!("bar {}", x)
-    }
-}
+pub(crate) mod day1;
 
 solutions! {
     day 1 {
