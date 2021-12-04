@@ -12,6 +12,7 @@ pub type EyreResult<T, E = color_eyre::Report> = Result<T, E>;
 pub(crate) mod day1;
 pub(crate) mod day2;
 pub(crate) mod day3;
+pub(crate) mod day4;
 
 solutions! {
     day 1 {
@@ -24,6 +25,10 @@ solutions! {
     },
     day 3 {
         module: day3,
+        linking: Restart,
+    },
+    day 4 {
+        module: day4,
         linking: Restart,
     }
 }
