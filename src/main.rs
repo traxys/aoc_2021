@@ -9,10 +9,13 @@ use harness::{Restart, RunParams};
 
 pub type EyreResult<T, E = color_eyre::Report> = Result<T, E>;
 
+pub(crate) mod utils;
+
 pub(crate) mod day1;
 pub(crate) mod day2;
 pub(crate) mod day3;
 pub(crate) mod day4;
+pub(crate) mod day5;
 
 solutions! {
     day 1 {
@@ -30,7 +33,11 @@ solutions! {
     day 4 {
         module: day4,
         linking: Restart,
-    }
+    },
+    day 5 {
+        module: day5,
+        linking: Restart,
+    },
 }
 
 #[derive(Debug)]
