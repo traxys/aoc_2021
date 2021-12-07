@@ -26,27 +26,24 @@ pub(crate) fn part1(mut input: Parsed) -> EyreResult<u64> {
         .sum())
 }
 
-fn fuel(x: i64, xi: i64) -> i64 {
-    let a = (xi - x).abs();
+fn fuel(x: u64, xi: u64) -> u64 {
+    let a = (xi as i64 - x as i64).abs() as u64;
     (a + 1) * (a) / 2
 }
 
-fn total_fuel(x: i64, pos: &[i64]) -> i64 {
+fn total_fuel(x: u64, pos: &[u64]) -> u64 {
     pos.iter().map(|&xi| fuel(x, xi)).sum()
 }
 
 pub(crate) fn part2(input: Parsed) -> EyreResult<u64> {
-    let inp: Vec<_> = input.iter().map(|&v| v as i64).collect();
-
-    let (_, fuelmin) = (0..*inp
-        .iter()
-        .max()
-        .ok_or(color_eyre::eyre::eyre!("Input is empty"))?)
-        .map(|x| (x, total_fuel(x, &inp)))
-        .min_by(|(_, v), (_, v2)| v.cmp(v2))
-        .ok_or(color_eyre::eyre::eyre!("Range was empty"))?;
-
-    Ok(fuelmin as u64)
+    let average = (input.iter().sum::<u64>() as f64 / input.len() as f64).round() as u64;
+    // We can prove that avg(x) - 0.5 < distance < avg(x) + 0.5
+    // We just have to try 2 values in order to find the correct distance, but use 3 just to be
+    // safe
+    Ok((-1..=1)
+            .map(|off| total_fuel((average as i64 + off) as u64, &input))
+            .min()
+            .unwrap())
 }
 
 pub(crate) fn fmt1(output: u64) -> String {
