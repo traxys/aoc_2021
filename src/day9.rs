@@ -1,6 +1,6 @@
 use crate::EyreResult;
 use nalgebra::DMatrix;
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 type Parsed = DMatrix<u8>;
 
@@ -91,14 +91,12 @@ pub(crate) fn part2(matrix: Parsed) -> EyreResult<usize> {
         x
     }
 
-    fn non_compressing_find(basins: &DMatrix<Basin>, mut x: (usize, usize)) -> (usize, usize) {
-        while x != basins[x].parent {
-            x = basins[x].parent;
-        }
-        x
-    }
-
-    fn union(basins: &mut DMatrix<Basin>, x: (usize, usize), y: (usize, usize)) {
+    fn union(
+        basins: &mut DMatrix<Basin>,
+        roots: &mut HashSet<(usize, usize)>,
+        x: (usize, usize),
+        y: (usize, usize),
+    ) {
         let mut x = find(basins, x);
         let mut y = find(basins, y);
 
@@ -109,6 +107,7 @@ pub(crate) fn part2(matrix: Parsed) -> EyreResult<usize> {
         if basins[x].size < basins[y].size {
             std::mem::swap(&mut x, &mut y);
         }
+        roots.remove(&y);
 
         basins[y].parent = x;
         basins[x].size += basins[y].size;
@@ -119,21 +118,25 @@ pub(crate) fn part2(matrix: Parsed) -> EyreResult<usize> {
         size: 1,
     });
 
+    let m = &matrix;
+    let mut roots: HashSet<_> = (0..matrix.ncols())
+        .map(|j| {
+            (0..m.nrows())
+                .filter(move |&i| m[(i, j)] != 9)
+                .map(move |i| (i, j))
+        })
+        .flatten()
+        .collect();
+
     for j in 0..matrix.ncols() {
         for i in 0..matrix.nrows() {
             if let Some(flow) = flows_into(&matrix, i, j) {
                 if matrix[(i, j)] != 9 {
-                    union(&mut basins, (i, j), flow);
+                    union(&mut basins, &mut roots, (i, j), flow);
                 }
             }
         }
     }
-
-    let mut basins_list = HashMap::new();
-    basins.iter().filter(|b| b.size > 1).for_each(|basin| {
-        let parent = non_compressing_find(&basins, basin.parent);
-        basins_list.insert(parent, basins[parent].size);
-    });
 
     /*
     for (basin, size) in basins_list.iter() {
@@ -157,19 +160,10 @@ pub(crate) fn part2(matrix: Parsed) -> EyreResult<usize> {
         }
     } */
 
-    let mut mult_size = 1;
+    let mut basins: Vec<_> = roots.iter().map(|&k| basins[k].size).collect();
+    basins.sort_by(|a, b| b.cmp(a));
 
-    for _ in 0..3 {
-        let (max, max_size) = basins_list
-            .iter()
-            .map(|(k, v)| (*k, *v))
-            .max_by(|(_, s), (_, s2)| s.cmp(s2))
-            .unwrap();
-        basins_list.remove(&max);
-        mult_size *= max_size;
-    }
-
-    Ok(mult_size)
+    Ok(basins[0] * basins[1] * basins[2])
 }
 
 pub(crate) fn fmt1(output: usize) -> String {
