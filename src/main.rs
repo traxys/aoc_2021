@@ -67,8 +67,7 @@ impl FromStr for Input {
 
 #[derive(StructOpt, Debug)]
 struct Args {
-    #[structopt(short, long, possible_values = POSSIBLE_DAYS,
-default_value = "latest")]
+    #[structopt(short, long, possible_values = POSSIBLE_DAYS, default_value = "latest")]
     day: Day,
     #[structopt(long, short, possible_values = &["1", "2"])]
     part: Option<usize>,
