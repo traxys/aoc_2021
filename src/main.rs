@@ -21,6 +21,7 @@ pub(crate) mod day7;
 pub(crate) mod day8;
 pub(crate) mod day9;
 pub(crate) mod day10;
+pub(crate) mod day11;
 
 solutions! {
     day 1 {
@@ -62,7 +63,11 @@ solutions! {
     day 10 {
         module: day10,
         linking: Restart,
-    }
+    },
+    day 11 {
+        module: day11,
+        linking: Restart,
+    },
 }
 
 #[derive(Debug)]
