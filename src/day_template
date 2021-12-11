@@ -1,4 +1,9 @@
-use crate::EyreResult;
+use crate::{day, EyreResult};
+
+day! {
+	parser
+	part1 = "{}",
+}
 
 type Parsed = 
 
@@ -10,13 +15,5 @@ pub(crate) fn part1(_: Parsed) -> EyreResult<()> {
 }
 
 pub(crate) fn part2(_: Parsed) -> EyreResult<()> {
-	todo!()
-}
-
-pub(crate) fn fmt1(output: ()) -> String {
-	todo!()
-}
-
-pub(crate) fn fmt2(output: ()) -> String {
 	todo!()
 }
