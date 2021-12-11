@@ -1,4 +1,10 @@
-use crate::EyreResult;
+use crate::{EyreResult, day};
+
+day! {
+    parser,
+    part1 => "The depth increased {} times",
+    part2 => "The depth increased {} times with windows",
+}
 
 pub(crate) fn parser(input: &str) -> EyreResult<Vec<u64>> {
     input
@@ -24,12 +30,4 @@ pub(crate) fn part2(depths: Vec<u64>) -> EyreResult<usize> {
             .map(|((a, b), c)| a + b + c)
     };
     Ok(sums().zip(sums().skip(1)).filter(|(f, s)| f < s).count())
-}
-
-pub(crate) fn fmt1(output: usize) -> String {
-    format!("The depth increased {} times", output)
-}
-
-pub(crate) fn fmt2(output: usize) -> String {
-    format!("The depth increased {} times with windows", output)
 }

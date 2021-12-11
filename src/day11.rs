@@ -1,5 +1,11 @@
-use crate::EyreResult;
+use crate::{day, EyreResult};
 use arrayvec::ArrayVec;
+
+day! {
+    parser,
+    part1 => "There where {} flashes",
+    part2 => "Synchronizes after {} steps",
+}
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct Octopus {
@@ -92,15 +98,7 @@ pub(crate) fn part2(mut input: Parsed) -> EyreResult<usize> {
     loop {
         i += 1;
         if step(&mut input) == 10 * 10 {
-            break Ok(i)
+            break Ok(i);
         }
     }
-}
-
-pub(crate) fn fmt1(output: usize) -> String {
-    format!("There where {} flashes", output)
-}
-
-pub(crate) fn fmt2(output: usize) -> String {
-    format!("Synchronizes after {} steps", output)
 }

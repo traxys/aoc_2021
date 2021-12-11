@@ -1,4 +1,10 @@
-use crate::EyreResult;
+use crate::{day, EyreResult};
+
+day! {
+    parser,
+    part1 => "After 80 days there are {} fishes",
+    part2 => "After 256 days there are {} fishes"
+}
 
 type Parsed = [u64; 9];
 
@@ -43,14 +49,6 @@ pub(crate) fn part2(mut fishes: Parsed) -> EyreResult<u64> {
         fishes = step(fishes)
     }
     Ok(fishes.iter().sum())
-}
-
-pub(crate) fn fmt1(output: u64) -> String {
-    format!("After 80 days there are {} fishes", output)
-}
-
-pub(crate) fn fmt2(output: u64) -> String {
-    format!("After 256 days there are {} fishes", output)
 }
 
 #[cfg(test)]

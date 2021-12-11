@@ -5,69 +5,25 @@ use structopt::StructOpt;
 
 mod harness;
 
-use harness::{Restart, RunParams};
+pub(crate) use harness::Part;
+use harness::RunParams;
 
 pub type EyreResult<T, E = color_eyre::Report> = Result<T, E>;
 
 pub(crate) mod utils;
 
-pub(crate) mod day1;
-pub(crate) mod day2;
-pub(crate) mod day3;
-pub(crate) mod day4;
-pub(crate) mod day5;
-pub(crate) mod day6;
-pub(crate) mod day7;
-pub(crate) mod day8;
-pub(crate) mod day9;
-pub(crate) mod day10;
-pub(crate) mod day11;
-
-solutions! {
-    day 1 {
-        module: day1,
-        linking: Restart,
-    },
-    day 2 {
-        module: day2,
-        linking: Restart, 
-    },
-    day 3 {
-        module: day3,
-        linking: Restart,
-    },
-    day 4 {
-        module: day4,
-        linking: Restart,
-    },
-    day 5 {
-        module: day5,
-        linking: Restart,
-    },
-    day 6 {
-        module: day6,
-        linking: Restart,
-    },
-    day 7 {
-        module: day7,
-        linking: Restart,
-    },
-    day 8 {
-        module: day8,
-        linking: Restart,
-    },
-    day 9 {
-        module: day9,
-        linking: Restart,
-    },
-    day 10 {
-        module: day10,
-        linking: Restart,
-    },
-    day 11 {
-        module: day11,
-        linking: Restart,
-    },
+days! {
+    1 = day1,
+    2 = day2,
+    3 = day3,
+    4 = day4,
+    5 = day5,
+    6 = day6,
+    7 = day7,
+    8 = day8,
+    9 = day9,
+    10 = day10,
+    11 = day11,
 }
 
 #[derive(Debug)]
@@ -114,9 +70,8 @@ struct Args {
     #[structopt(short, long, possible_values = POSSIBLE_DAYS,
 default_value = "latest")]
     day: Day,
-    #[structopt(long, short, possible_values = &["1", "2"],
-default_value = "1")]
-    part: usize,
+    #[structopt(long, short, possible_values = &["1", "2"])]
+    part: Option<usize>,
     #[structopt(long)]
     no_timings: bool,
     #[structopt(short, long, default_value = "day")]
@@ -190,7 +145,11 @@ fn main() -> EyreResult<()> {
 
     run_solution(
         day,
-        args.part,
+        args.part.map(|v| match v {
+            1 => Part::Part1,
+            2 => Part::Part2,
+            _ => unreachable!(),
+        }),
         &input,
         RunParams {
             timings: !args.no_timings,

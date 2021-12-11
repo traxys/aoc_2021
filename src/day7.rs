@@ -1,4 +1,10 @@
-use crate::EyreResult;
+use crate::{day, EyreResult};
+
+day! {
+    parser,
+    part1 => "Minimum fuel is {}",
+    part2 => "Minimum fuel is {}",
+}
 
 type Parsed = Vec<u64>;
 
@@ -41,15 +47,7 @@ pub(crate) fn part2(input: Parsed) -> EyreResult<u64> {
     // We just have to try 2 values in order to find the correct distance, but use 3 just to be
     // safe
     Ok((-1..=1)
-            .map(|off| total_fuel((average as i64 + off) as u64, &input))
-            .min()
-            .unwrap())
-}
-
-pub(crate) fn fmt1(output: u64) -> String {
-    format!("Minimum fuel is {}", output)
-}
-
-pub(crate) fn fmt2(output: u64) -> String {
-    format!("Minimum fuel is {}", output)
+        .map(|off| total_fuel((average as i64 + off) as u64, &input))
+        .min()
+        .unwrap())
 }

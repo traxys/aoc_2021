@@ -1,4 +1,10 @@
-use crate::EyreResult;
+use crate::{day, EyreResult};
+
+day! {
+    parser,
+    part1 => "{}",
+    part2 => "{}",
+}
 
 pub(crate) fn parser(input: &str) -> EyreResult<(usize, Vec<u16>)> {
     let len = input
@@ -13,7 +19,7 @@ pub(crate) fn parser(input: &str) -> EyreResult<(usize, Vec<u16>)> {
     ))
 }
 
-pub(crate) fn part1((num_len, numbers): (usize, Vec<u16>)) -> EyreResult<(u16, u16)> {
+pub(crate) fn part1((num_len, numbers): (usize, Vec<u16>)) -> EyreResult<String> {
     let (len, occurences) =
         numbers
             .iter()
@@ -27,7 +33,13 @@ pub(crate) fn part1((num_len, numbers): (usize, Vec<u16>)) -> EyreResult<(u16, u
     for (pos, &bit) in occurences.iter().enumerate() {
         gamma += ((bit > (len / 2)) as u16) << pos;
     }
-    Ok((gamma, !gamma & !(!0 << num_len)))
+    let epsilon = !gamma & !(!0 << num_len);
+    Ok(format!(
+        "Gamma is {:b} and epsilon is {:b}. Power consumption is {}",
+        gamma,
+        epsilon,
+        gamma as u64 * epsilon as u64
+    ))
 }
 
 fn bit_criteria_filter(mut numbers: Vec<u16>, num_len: usize, most: bool) -> u16 {
@@ -64,26 +76,13 @@ fn bit_criteria_filter(mut numbers: Vec<u16>, num_len: usize, most: bool) -> u16
     numbers[0]
 }
 
-pub(crate) fn part2((num_len, numbers): (usize, Vec<u16>)) -> EyreResult<(u16, u16)> {
+pub(crate) fn part2((num_len, numbers): (usize, Vec<u16>)) -> EyreResult<String> {
     let oxygen_rating = bit_criteria_filter(numbers.clone(), num_len, true);
     let co2_rating = bit_criteria_filter(numbers, num_len, false);
-    Ok((oxygen_rating, co2_rating))
-}
-
-pub(crate) fn fmt1((gamma, epsilon): (u16, u16)) -> String {
-    format!(
-        "Gamma is {:b} and epsilon is {:b}. Power consumption is {}",
-        gamma,
-        epsilon,
-        gamma as u64 * epsilon as u64
-    )
-}
-
-pub(crate) fn fmt2((oxygen_rating, co2_rating): (u16, u16)) -> String {
-    format!(
+    Ok(format!(
         "oxygen_rating is {:b} and co2_rating is {:b}. Life support is {}",
         oxygen_rating,
         co2_rating,
         oxygen_rating as u64 * co2_rating as u64
-    )
+    ))
 }

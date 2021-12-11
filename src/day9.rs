@@ -1,6 +1,12 @@
-use crate::EyreResult;
+use crate::{EyreResult, day};
 use nalgebra::DMatrix;
 use std::collections::HashSet;
+
+day! {
+    parser,
+    part1 => "Risk level is {}",
+    part2 => "Multiplication of size is {}",
+}
 
 type Parsed = DMatrix<u8>;
 
@@ -164,12 +170,4 @@ pub(crate) fn part2(matrix: Parsed) -> EyreResult<usize> {
     basins.sort_by(|a, b| b.cmp(a));
 
     Ok(basins[0] * basins[1] * basins[2])
-}
-
-pub(crate) fn fmt1(output: usize) -> String {
-    format!("Risk level is {}", output)
-}
-
-pub(crate) fn fmt2(output: usize) -> String {
-    format!("Multiplication of size is {}", output)
 }

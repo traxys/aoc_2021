@@ -1,24 +1,16 @@
-use crate::EyreResult;
-use std::{
-    marker::PhantomData,
-    time::{Duration, Instant},
-};
-
-#[allow(unused)]
-pub(crate) struct Continue;
-pub(crate) struct Restart;
+use std::time::{Duration, Instant};
 
 pub(crate) struct RunParams {
     pub(crate) timings: bool,
 }
 
-struct Timings {
+pub(crate) struct Timings {
     parse: Duration,
     inter: Option<Duration>,
     part: Duration,
 }
 
-struct ExtraInfo {
+pub(crate) struct ExtraInfo {
     timings: Option<Timings>,
 }
 
@@ -44,45 +36,31 @@ impl ExtraInfo {
     }
 }
 
-pub(crate) struct Problem<P, S1, F1, S2, F2, C, Inp, O1, O2> {
-    pub(crate) parser: P,
-    pub(crate) part1: S1,
-    pub(crate) fmt1: F1,
-    pub(crate) part2: S2,
-    pub(crate) fmt2: F2,
-    pub(crate) _cont: PhantomData<C>,
-    pub(crate) _inp: PhantomData<Inp>,
-    pub(crate) _outp1: PhantomData<O1>,
-    pub(crate) _outp2: PhantomData<O2>,
-}
+pub(crate) fn render(
+    solution: String,
+    parsed_time: Duration,
+    part_time: Duration,
+    timings: bool,
+) -> String {
+    let info = ExtraInfo {
+        timings: if timings {
+            Some(Timings {
+                parse: parsed_time,
+                part: part_time,
+                inter: None,
+            })
+        } else {
+            None
+        },
+    };
 
-impl<P, S1, F1, S2, F2, C, Inp, O1, O2> Problem<P, S1, F1, S2, F2, C, Inp, O1, O2>
-where
-    F1: FnMut(O1) -> String,
-{
-    fn fmt1(&mut self, input: O1, extra: ExtraInfo) -> String {
-        let res = (self.fmt1)(input);
-        match extra.render() {
-            None => res,
-            Some(info) => res + "\n" + &info,
-        }
+    match info.render() {
+        None => solution,
+        Some(info) => solution + "\n" + &info,
     }
 }
 
-impl<P, S1, F1, S2, F2, C, Inp, O1, O2> Problem<P, S1, F1, S2, F2, C, Inp, O1, O2>
-where
-    F2: FnMut(O2) -> String,
-{
-    fn fmt2(&mut self, input: O2, extra: ExtraInfo) -> String {
-        let res = (self.fmt2)(input);
-        match extra.render() {
-            None => res,
-            Some(info) => res + "\n" + &info,
-        }
-    }
-}
-
-fn time_func<F, I, O>(mut f: F, a: I) -> (O, Duration)
+pub(crate) fn time_func<F, I, O>(mut f: F, a: I) -> (O, Duration)
 where
     F: FnMut(I) -> O,
 {
@@ -91,78 +69,126 @@ where
     (res, start.elapsed())
 }
 
-impl<'i, P, S1, F1, S2, F2, C, Inp, O1, O2> Problem<P, S1, F1, S2, F2, C, Inp, O1, O2>
-where
-    P: FnMut(&'i str) -> EyreResult<Inp>,
-    S1: FnMut(Inp) -> EyreResult<O1>,
-    F1: FnMut(O1) -> String,
-{
-    pub(crate) fn part1(&mut self, input: &'i str, params: RunParams) -> EyreResult<String> {
-        let (parsed, parsed_time) = time_func(&mut self.parser, input);
-        let (part1, part1_time) = time_func(&mut self.part1, parsed?);
+#[derive(Clone, Copy)]
+pub(crate) enum Part {
+    Part1,
+    Part2,
+}
 
-        let timings = if params.timings {
-            Some(Timings {
-                parse: parsed_time,
-                inter: None,
-                part: part1_time,
-            })
-        } else {
-            None
+impl std::fmt::Display for Part {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let p = match self {
+            Part::Part1 => 1,
+            Part::Part2 => 2,
         };
-
-        Ok(self.fmt1(part1?, ExtraInfo { timings }))
+        write!(f, "{}", p)
     }
 }
 
-impl<'i, P, S1, F1, S2, F2, Inp, O1, O2> Problem<P, S1, F1, S2, F2, Continue, Inp, O1, O2>
-where
-    P: FnMut(&'i str) -> EyreResult<Inp>,
-    S1: FnMut(Inp) -> EyreResult<O1>,
-    S2: FnMut(O1) -> EyreResult<O2>,
-    F2: FnMut(O2) -> String,
-{
-    #[allow(unused)]
-    pub(crate) fn part2(&mut self, input: &'i str, params: RunParams) -> EyreResult<String> {
-        let (parsed, parsed_time) = time_func(&mut self.parser, input);
-        let (part1, part1_time) = time_func(&mut self.part1, parsed?);
-        let (part2, part2_time) = time_func(&mut self.part2, part1?);
+#[macro_export]
+macro_rules! day {
+    (
+        $parser:path,
+        $part1:path => $fmt1:literal $(,)?
+    ) => {
+        pub(crate) fn solver_latest() -> crate::Part {
+            crate::Part::Part1
+        }
 
-        let timings = if params.timings {
-            Some(Timings {
-                parse: parsed_time,
-                inter: Some(part1_time),
-                part: part2_time,
-            })
-        } else {
-            None
-        };
-        Ok(self.fmt2(part2?, ExtraInfo { timings }))
-    }
+        pub(crate) fn solve<'i>(
+            part: crate::Part,
+            input: &'i str,
+            params: crate::harness::RunParams,
+        ) -> crate::EyreResult<String> {
+            let (parsed, parsed_time) = crate::harness::time_func($parser, input);
+            let (result, part_time) = match part {
+                crate::Part::Part1 => {
+                    let (part, part_time) = crate::harness::time_func($part1, parsed?);
+                    (format!($fmt1, part?), part_time)
+                }
+                crate::Part::Part2 => color_eyre::eyre::bail!("part 2 is not implemented"),
+            };
+
+            Ok(crate::harness::render(
+                result,
+                parsed_time,
+                part_time,
+                params.timings,
+            ))
+        }
+    };
+    (
+        $parser:path,
+        $part1:path => $fmt1:literal,
+        $part2:path => $fmt2:literal $(,)?
+    ) => {
+        pub(crate) fn solver_latest() -> crate::Part {
+            crate::Part::Part2
+        }
+
+        pub(crate) fn solve<'i>(
+            part: crate::Part,
+            input: &'i str,
+            params: crate::harness::RunParams,
+        ) -> crate::EyreResult<String> {
+            let (parsed, parsed_time) = crate::harness::time_func($parser, input);
+            let (result, part_time) = match part {
+                crate::Part::Part1 => {
+                    let (part, part_time) = crate::harness::time_func($part1, parsed?);
+                    (format!($fmt1, part?), part_time)
+                }
+                crate::Part::Part2 => {
+                    let (part, part_time) = crate::harness::time_func($part2, parsed?);
+                    (format!($fmt2, part?), part_time)
+                }
+            };
+
+            Ok(crate::harness::render(
+                result,
+                parsed_time,
+                part_time,
+                params.timings,
+            ))
+        }
+    };
 }
 
-impl<'i, P, S1, F1, F2, S2, Inp, O1, O2> Problem<P, S1, F1, S2, F2, Restart, Inp, O1, O2>
-where
-    P: FnMut(&'i str) -> EyreResult<Inp>,
-    S2: FnMut(Inp) -> EyreResult<O2>,
-    F2: FnMut(O2) -> String,
-{
-    pub(crate) fn part2(&mut self, input: &'i str, params: RunParams) -> EyreResult<String> {
-        let (parsed, parsed_time) = time_func(&mut self.parser, input);
-        let (part2, part_time) = time_func(&mut self.part2, parsed?);
+#[macro_export]
+macro_rules! days {
+    ($($day:literal = $mod:ident,)*) => {
+        const IMPLEMENTED_DAYS: &[usize] = &[$($day,)*];
+        const POSSIBLE_DAYS: &[&str] = &["latest", $(stringify!($day),)*];
 
-        let timings = if params.timings {
-            Some(Timings {
-                parse: parsed_time,
-                inter: None,
-                part: part_time,
-            })
-        } else {
-            None
-        };
+        $(
+            pub(crate) mod $mod;
+        )*
 
-        Ok(self.fmt2(part2?, ExtraInfo { timings }))
-    }
+        fn resolve_day(day: Day) -> usize {
+            match day {
+                Day::Latest => *IMPLEMENTED_DAYS.last().unwrap(),
+                Day::Specific(x) => x,
+            }
+        }
+
+        fn run_solution(
+            day: usize,
+            part: Option<crate::Part>,
+            input: &str,
+            params: crate::harness::RunParams
+        ) -> EyreResult<()> {
+            match day {
+                $(
+                    $day => {
+                        let part = part.unwrap_or($mod::solver_latest());
+                        let result = $mod::solve(part, input, params)?;
+                        println!("Day {} Part {}:\n  {}", day, part, result);
+                        Ok(())
+                    }
+                )*
+                _ => eyre::bail!("Day {} was not implemented", day),
+            }
+        }
+    };
 }
 
 #[macro_export]

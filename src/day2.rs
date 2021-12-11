@@ -1,6 +1,12 @@
-use crate::EyreResult;
+use crate::{day, EyreResult};
 use color_eyre::eyre;
 use std::str::FromStr;
+
+day! {
+    parser,
+    part1 => "Result = {}",
+    part2 => "Result = {}",
+}
 
 pub(crate) enum Action {
     Forward,
@@ -39,8 +45,8 @@ pub(crate) struct State {
     vertical: i64,
 }
 
-pub(crate) fn part1(instructions: Vec<(Action, u32)>) -> EyreResult<State> {
-    Ok(instructions.iter().fold(
+pub(crate) fn part1(instructions: Vec<(Action, u32)>) -> EyreResult<i64> {
+    let state = instructions.iter().fold(
         State {
             horizontal: 0,
             vertical: 0,
@@ -53,7 +59,9 @@ pub(crate) fn part1(instructions: Vec<(Action, u32)>) -> EyreResult<State> {
             }
             state
         },
-    ))
+    );
+
+    Ok(state.horizontal as i64 * state.vertical)
 }
 
 pub(crate) struct AimState {
@@ -62,8 +70,8 @@ pub(crate) struct AimState {
     aim: i64,
 }
 
-pub(crate) fn part2(instructions: Vec<(Action, u32)>) -> EyreResult<AimState> {
-    Ok(instructions.iter().fold(
+pub(crate) fn part2(instructions: Vec<(Action, u32)>) -> EyreResult<i64> {
+    let aim_state = instructions.iter().fold(
         AimState {
             horizontal: 0,
             vertical: 0,
@@ -80,18 +88,7 @@ pub(crate) fn part2(instructions: Vec<(Action, u32)>) -> EyreResult<AimState> {
             }
             state
         },
-    ))
-}
+    );
 
-pub(crate) fn fmt1(output: State) -> String {
-    format!(
-        "horizontal = {}, vertical = {}, result = {}",
-        output.horizontal,
-        output.vertical,
-        output.horizontal as i64 * output.vertical
-    )
-}
-
-pub(crate) fn fmt2(output: AimState) -> String {
-    format!("Result is {}", output.horizontal as i64 * output.vertical)
+    Ok(aim_state.horizontal as i64 * aim_state.vertical)
 }

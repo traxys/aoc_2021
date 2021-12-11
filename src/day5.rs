@@ -1,6 +1,12 @@
-use crate::{utils::split2, EyreResult};
+use crate::{day, utils::split2, EyreResult};
 use num::integer::gcd;
 use std::collections::HashSet;
+
+day! {
+    parser,
+    part1 => "Overlapping point count: {}",
+    part2 => "Overlapping point count: {}"
+}
 
 pub(crate) struct Line {
     start: (i64, i64),
@@ -38,7 +44,7 @@ impl Line {
 
 #[derive(Debug)]
 struct LineIterator {
-    current: (i64, i64),
+   current: (i64, i64),
     end: (i64, i64),
     director: (i64, i64),
     done: bool,
@@ -104,22 +110,12 @@ pub(crate) fn part1(lines: Parsed) -> EyreResult<usize> {
 pub(crate) fn part2(lines: Parsed) -> EyreResult<usize> {
     let mut present = HashSet::new();
     let mut overlap = HashSet::new();
-    lines
-        .iter()
-        .for_each(|line| {
-            line.points()
-                .filter(|&point| !present.insert(point))
-                .for_each(|point| {
-                    overlap.insert(point);
-                })
-        });
+    lines.iter().for_each(|line| {
+        line.points()
+            .filter(|&point| !present.insert(point))
+            .for_each(|point| {
+                overlap.insert(point);
+            })
+    });
     Ok(overlap.len())
-}
-
-pub(crate) fn fmt1(output: usize) -> String {
-    format!("Overlapping point count: {}", output)
-}
-
-pub(crate) fn fmt2(output: usize) -> String {
-    format!("Overlapping point count: {}", output)
 }

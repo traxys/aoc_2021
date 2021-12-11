@@ -1,5 +1,11 @@
-use crate::EyreResult;
+use crate::{day, EyreResult};
 use arrayvec::ArrayVec;
+
+day! {
+    parser,
+    part1 => "Score of the first winning board is {}",
+    part2 => "Score of the last winning board is {}"
+}
 
 #[derive(Debug)]
 pub(crate) struct Board {
@@ -99,12 +105,4 @@ pub(crate) fn part2((draws, mut boards): Parsed) -> EyreResult<u64> {
         boards.retain(|b| !b.is_complete())
     }
     unreachable!("no board wins")
-}
-
-pub(crate) fn fmt1(output: u64) -> String {
-    format!("Score of the first winning board is {}", output)
-}
-
-pub(crate) fn fmt2(output: u64) -> String {
-    format!("Score of the last winning board is {}", output)
 }

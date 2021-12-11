@@ -1,6 +1,12 @@
-use crate::{utils::split2, EyreResult};
+use crate::{day, utils::split2, EyreResult};
 use arrayvec::ArrayVec;
 use color_eyre::eyre;
+
+day! {
+    parser,
+    part1 => "There are {} 1,4,7 and 8",
+    part2 => "Sum of displays is {}"
+}
 
 type Parsed = Vec<([ArrayVec<u8, 7>; 10], [ArrayVec<u8, 7>; 4])>;
 
@@ -121,14 +127,6 @@ pub(crate) fn part2(mut logs: Parsed) -> EyreResult<usize> {
             Ok(translate_output(&reversed, output))
         })
         .try_fold(0, |s, n| Ok(s + n?))
-}
-
-pub(crate) fn fmt1(output: usize) -> String {
-    format!("There are {} 1,4,7 and 8", output)
-}
-
-pub(crate) fn fmt2(output: usize) -> String {
-    format!("Sum of displays is {}", output)
 }
 
 #[cfg(test)]

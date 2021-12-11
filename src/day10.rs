@@ -1,6 +1,12 @@
-use crate::EyreResult;
+use crate::{day, EyreResult};
 
 type Parsed = Vec<Vec<i8>>;
+
+day! {
+    parser,
+    part1 => "Syntax error score is {}",
+    part2 => "Middle auto complete is {}",
+}
 
 pub(crate) fn parser(input: &str) -> EyreResult<Parsed> {
     input
@@ -84,12 +90,4 @@ pub(crate) fn part2(input: Parsed) -> EyreResult<u64> {
         .collect();
     scores.sort();
     Ok(scores[scores.len() / 2])
-}
-
-pub(crate) fn fmt1(output: usize) -> String {
-    format!("Syntax error score is {}", output)
-}
-
-pub(crate) fn fmt2(output: u64) -> String {
-    format!("Middle auto complete is {}", output)
 }
