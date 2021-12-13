@@ -1,8 +1,8 @@
 use crate::{day, EyreResult};
 
 day! {
-	parser
-	part1 = "{}",
+	parser,
+	part1 => "{}",
 }
 
 type Parsed = 
