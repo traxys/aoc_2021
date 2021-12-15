@@ -1,130 +1,172 @@
+use std::collections::{BinaryHeap, HashMap};
+
 use crate::{day, EyreResult};
-use petgraph::{algo::dijkstra, graph::UnGraph, visit::EdgeRef};
+use nalgebra::DMatrix;
 
 day! {
     parser,
-    part1 => "{}",
-    part2 => "{}",
+    part1 => "Total risk is {}",
+    part2 => "Total risk is {}",
 }
 
-type Parsed<'a> = &'a str;
+type Parsed = DMatrix<u8>;
 
 pub(crate) fn parser(input: &str) -> EyreResult<Parsed> {
-    Ok(input)
-}
+    let cols = input.lines().count();
+    let lines = input
+        .find('\n')
+        .ok_or(color_eyre::eyre::eyre!("No lines in input"))?;
 
-pub(crate) fn part1(input: Parsed) -> EyreResult<u64> {
-    let mut lines = input.lines().map(|l| l.trim().as_bytes());
-    let first = lines
-        .next()
-        .ok_or(color_eyre::eyre::eyre!("No first line"))?;
-    let mut g: UnGraph<u8, ()> = UnGraph::with_capacity(input.len(), 2 * input.len());
-
-    let start = g.add_node(first[0] - b'0');
-
-    let mut curr_line = vec![start];
-    for &n in &first[1..] {
-        let node = g.add_node(n - b'0');
-        g.add_edge(*curr_line.last().unwrap(), node, ());
-        curr_line.push(node);
-    }
-
-    let mut prev_line = curr_line;
-    for line in lines {
-        let mut curr_line = Vec::with_capacity(line.len());
-        let first = g.add_node(line[0] - b'0');
-        curr_line.push(first);
-        g.add_edge(prev_line[0], first, ());
-
-        for (&n, &top) in line.iter().skip(1).zip(prev_line.iter().skip(1)) {
-            let node = g.add_node(n - b'0');
-            g.add_edge(*curr_line.last().unwrap(), node, ());
-            g.add_edge(top, node, ());
-            curr_line.push(node);
-        }
-
-        prev_line = curr_line;
-    }
-
-    let end = *prev_line.last().unwrap();
-
-    let paths = dijkstra(&g, start, Some(end), |edge| g[edge.target()] as u64);
-    let &end_cost = paths
-        .get(&end)
-        .ok_or(color_eyre::eyre::eyre!("End was not reachable"))?;
-
-    Ok(end_cost)
-}
-
-fn pseudo_mod(y: u8, off: u8) -> u8 {
-    let x = (y + off) % 10;
-    (y + off > 9) as u8 + x
-}
-
-fn repeated_chain_skip_first(line: &[u8], row: u8) -> impl Iterator<Item = u8> + '_ {
-    line[1..]
-        .iter()
-        .map(move |n| pseudo_mod(n - b'0', row))
-        .chain(
-            (1..5)
-                .map(move |repeat| line.iter().map(move |n| pseudo_mod(n - b'0', row + repeat)))
-                .flatten(),
-        )
-}
-
-pub(crate) fn part2(input: Parsed) -> EyreResult<u64> {
-    let mut lines = input.lines().map(|l| l.trim().as_bytes());
-    let first = lines
-        .next()
-        .ok_or(color_eyre::eyre::eyre!("No first line"))?;
-    let mut g: UnGraph<u8, ()> = UnGraph::with_capacity(input.len() * 25, 2 * 25 * input.len());
-
-    let start = g.add_node(first[0] - b'0');
-
-    print!("{}", first[0] - b'0');
-    let mut curr_line = vec![start];
-    for n in repeated_chain_skip_first(first, 0) {
-        print!("{}", n);
-        let node = g.add_node(n);
-        g.add_edge(*curr_line.last().unwrap(), node, ());
-        curr_line.push(node);
-    }
-    println!();
-
-    let mut prev_line = curr_line;
-    for repeat in 0..5 {
-        for line in input
+    let table = DMatrix::from_iterator(
+        lines,
+        cols,
+        input
             .lines()
-            .skip((repeat == 0) as usize)
-            .map(|l| l.trim().as_bytes())
-        {
-            let n = pseudo_mod(line[0] - b'0', repeat);
-            print!("{}", n);
+            .map(|b| b.trim().as_bytes().iter().map(|b| b - b'0'))
+            .flatten(),
+    );
 
-            let mut curr_line = Vec::with_capacity(line.len() * 5);
-            let first = g.add_node(n);
-            curr_line.push(first);
-            g.add_edge(prev_line[0], first, ());
+    Ok(table)
+}
 
-            for (n, &top) in repeated_chain_skip_first(line, repeat).zip(prev_line.iter()) {
-                let node = g.add_node(n);
-                print!("{}", n);
-                g.add_edge(*curr_line.last().unwrap(), node, ());
-                g.add_edge(top, node, ());
-                curr_line.push(node);
-            }
+fn neighbours<F>(
+    i: isize,
+    j: isize,
+    rows: isize,
+    cols: isize,
+    cost_eval: &F,
+) -> impl Iterator<Item = ((usize, usize), u8)> + '_
+where
+    F: Fn((usize, usize)) -> u8,
+{
+    let mut vals = [(-1, -1); 4];
 
-            println!();
-            prev_line = curr_line;
+    if i > 0 {
+        vals[0] = (i - 1, j);
+    }
+    if i < rows - 1 {
+        vals[1] = (i + 1, j);
+    }
+
+    if j > 0 {
+        vals[2] = (i, j - 1);
+    }
+    if j < cols - 1 {
+        vals[3] = (i, j + 1);
+    }
+
+    vals.into_iter()
+        .filter(|&p| p != (-1, -1))
+        .map(|(i, j)| (i as usize, j as usize))
+        .map(|p| (p, cost_eval(p)))
+}
+
+fn search_cost<F>(rows: usize, cols: usize, cost_eval: F) -> u64
+where
+    F: Fn((usize, usize)) -> u8,
+{
+    #[derive(PartialEq, Eq)]
+    struct Path {
+        node: (usize, usize),
+        cost: u64,
+    }
+
+    impl Ord for Path {
+        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            other.cost.cmp(&self.cost)
         }
     }
 
-    let end = *prev_line.last().unwrap();
+    impl PartialOrd for Path {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            Some(self.cmp(other))
+        }
+    }
 
-    let paths = dijkstra(&g, start, Some(end), |edge| g[edge.target()] as u64);
-    let &end_cost = paths
-        .get(&end)
-        .ok_or(color_eyre::eyre::eyre!("End was not reachable"))?;
+    let target = (rows - 1, cols - 1);
 
-    Ok(end_cost)
+    let mut access = HashMap::new();
+    let mut paths = BinaryHeap::new();
+    paths.push(Path {
+        node: (0, 0),
+        cost: 0,
+    });
+
+    loop {
+        let path = paths.pop().unwrap();
+
+        if path.node == target {
+            return path.cost;
+        }
+
+        if let Some(&acc) = access.get(&path.node) {
+            if acc < path.cost {
+                continue;
+            }
+        }
+
+        for (p, cost) in neighbours(
+            path.node.0 as isize,
+            path.node.1 as isize,
+            rows as isize,
+            cols as isize,
+            &cost_eval,
+        ) {
+            let path_cost = cost as u64 + path.cost;
+            let keep = match access.get_mut(&p) {
+                None => {
+                    access.insert(p, path_cost);
+                    true
+                }
+                Some(oldcost) => {
+                    if *oldcost > path_cost {
+                        *oldcost = path_cost;
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+            if keep {
+                paths.push(Path {
+                    node: p,
+                    cost: path_cost,
+                })
+            }
+        }
+    }
+}
+
+pub(crate) fn part1(matrix: Parsed) -> EyreResult<u64> {
+    Ok(search_cost(matrix.nrows(), matrix.ncols(), |p| matrix[p]))
+}
+
+pub(crate) fn part2(matrix: Parsed) -> EyreResult<u64> {
+    let mut total_matrix = DMatrix::zeros(matrix.nrows() * 5, matrix.ncols() * 5);
+
+    for j in 0..matrix.ncols() {
+        for i in 0..matrix.nrows() {
+            total_matrix[(i, j)] = matrix[(i, j)];
+        }
+    }
+
+    for j in matrix.ncols()..total_matrix.ncols() {
+        for i in 0..total_matrix.nrows() {
+            let tmp = total_matrix[(i, j - matrix.ncols())] + 1;
+            total_matrix[(i, j)] = if tmp > 9 { 1 } else { tmp };
+        }
+    }
+
+    for j in 0..total_matrix.ncols() {
+        for i in matrix.nrows()..total_matrix.nrows() {
+            let tmp = total_matrix[(i - matrix.nrows(), j)] + 1;
+            total_matrix[(i, j)] = if tmp > 9 { 1 } else { tmp };
+        }
+    }
+
+    Ok(search_cost(
+        total_matrix.nrows(),
+        total_matrix.ncols(),
+        |p| total_matrix[p],
+    ))
 }
