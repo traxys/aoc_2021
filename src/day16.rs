@@ -59,10 +59,7 @@ pub(crate) enum Payload {
 type Parsed = Packet;
 
 fn bits(v: u8) -> impl Iterator<Item = Bit> {
-    (0..8)
-        .rev()
-        .map(move |i| Bit::Set(((1 << i) & v) != 0))
-        .chain(std::iter::once(Bit::Boundry))
+    (0..8).rev().map(move |i| ((1 << i) & v) >> i)
 }
 
 fn hex_digit(v: u8) -> u8 {
@@ -77,20 +74,7 @@ fn hex_slice(s: &[u8]) -> u8 {
     (hex_digit(s[0]) << 4) | hex_digit(s[1])
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum Bit {
-    Set(bool),
-    Boundry,
-}
-
-impl Bit {
-    fn to_bit(self) -> u8 {
-        match self {
-            Bit::Set(b) => b as u8,
-            Bit::Boundry => panic!(),
-        }
-    }
-}
+type Bit = u8;
 
 fn bit_stream(input: &str) -> impl Iterator<Item = Bit> + '_ {
     input
@@ -101,17 +85,11 @@ fn bit_stream(input: &str) -> impl Iterator<Item = Bit> + '_ {
         .flatten()
 }
 
-fn is_not_boundry(&b: &Bit) -> bool {
-    b != Bit::Boundry
-}
-
 fn num<I>(bit_count: usize, bits: &mut I) -> u64
 where
     I: Iterator<Item = Bit>,
 {
-    bits.filter(is_not_boundry)
-        .take(bit_count)
-        .map(Bit::to_bit)
+    bits.take(bit_count)
         .fold(0, |current, digit| current << 1 | digit as u64)
 }
 
@@ -119,7 +97,7 @@ fn take_bool<I>(bits: &mut I) -> bool
 where
     I: Iterator<Item = Bit>,
 {
-    bits.filter(is_not_boundry).next().unwrap().to_bit() == 1
+    bits.next().unwrap() == 1
 }
 
 fn parse_group<I>(bits: &mut I) -> ((bool, u8), usize)
@@ -229,28 +207,6 @@ pub(crate) fn part2(packet: Parsed) -> EyreResult<u64> {
 
 #[cfg(test)]
 mod test {
-
-    #[test]
-    fn bits() {
-        use super::bits;
-        use super::Bit::*;
-
-        assert_eq!(
-            Vec::from_iter(bits(0b00110101)),
-            vec![
-                Set(false),
-                Set(false),
-                Set(true),
-                Set(true),
-                Set(false),
-                Set(true),
-                Set(false),
-                Set(true),
-                Boundry
-            ]
-        )
-    }
-
     #[test]
     fn hex_slice() {
         use super::hex_slice;
@@ -259,37 +215,26 @@ mod test {
     }
 
     #[test]
-    fn hex() {
+    fn bits() {
         use super::bits;
-        use super::Bit::*;
 
         assert_eq!(
             Vec::from_iter(bits(0b00110101)),
-            vec![
-                Set(false),
-                Set(false),
-                Set(true),
-                Set(true),
-                Set(false),
-                Set(true),
-                Set(false),
-                Set(true),
-                Boundry
-            ]
+            vec![0, 0, 1, 1, 0, 1, 0, 1]
         )
     }
 
     #[test]
-    fn input() {
-        use super::{bit_stream, Bit::*};
+    fn bit_stream() {
+        use super::bit_stream;
 
         assert_eq!(
-            Vec::from_iter(bit_stream("D2FE28").filter(|&p| p != Boundry)),
+            Vec::from_iter(bit_stream("D2FE28")),
             Vec::from_iter(
                 "110100101111111000101000"
                     .as_bytes()
                     .iter()
-                    .map(|&b| Set(b == b'1'))
+                    .map(|&b| b - b'0')
             )
         )
     }
