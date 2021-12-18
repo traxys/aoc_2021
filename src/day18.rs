@@ -31,85 +31,74 @@ impl Pair {
         }
     }
 
-    fn exploding_reduce(self, depth: u8) -> (Pair, Option<u64>, Option<u64>, bool) {
+    fn exploding_reduce(&mut self, depth: u8) -> (Option<u64>, Option<u64>, bool) {
         match self {
-            na @ Pair::Number(_) => (na, None, None, false),
+            Pair::Number(_) => (None, None, false),
             p @ Pair::Composite(_, _) if depth >= 4 => match p.as_number_pair() {
                 None => todo!("Handle this case"),
-                Some((a, b)) => (Self::Number(0), Some(a), Some(b), true),
+                Some((a, b)) => {
+                    *p = Self::Number(0);
+                    (Some(a), Some(b), true)
+                }
             },
             Pair::Composite(l, r) => {
-                let (l, nl, nr, reducedl) = l.exploding_reduce(depth + 1);
+                let (nl, nr, reducedl) = l.exploding_reduce(depth + 1);
                 if reducedl {
-                    let r = match nr {
-                        None => r,
-                        Some(n) => Box::new(r.add_left(n)),
-                    };
-                    (Pair::Composite(Box::new(l), r), nl, None, true)
+                    if let Some(n) = nr {
+                        r.add_left(n);
+                    }
+                    (nl, None, true)
                 } else {
-                    let (r, nl, nr, reduced) = r.exploding_reduce(depth + 1);
-                    let l = match nl {
-                        None => Box::new(l),
-                        Some(n) => Box::new(l.add_right(n)),
-                    };
-                    (Pair::Composite(l, Box::new(r)), None, nr, reduced)
+                    let (nl, nr, reduced) = r.exploding_reduce(depth + 1);
+                    if let Some(n) = nl {
+                        l.add_right(n);
+                    }
+                    (None, nr, reduced)
                 }
             }
         }
     }
 
-    fn split(self) -> (Pair, bool) {
+    fn split(&mut self) -> bool {
         match self {
-            Pair::Number(n) if n > 9 => {
+            &mut Pair::Number(n) if n > 9 => {
                 let a = n / 2;
                 let b = n / 2 + (n % 2);
-                (
-                    Pair::Composite(Box::new(Pair::Number(a)), Box::new(Pair::Number(b))),
-                    true,
-                )
+                *self = Pair::Composite(Box::new(Pair::Number(a)), Box::new(Pair::Number(b)));
+                true
             }
-            p @ Pair::Number(_) => (p, false),
-            Pair::Composite(l, r) => {
-                let (l, rl) = l.split();
-                if rl {
-                    (Pair::Composite(Box::new(l), r), true)
-                } else {
-                    let (r, rr) = r.split();
-                    (Pair::Composite(Box::new(l), Box::new(r)), rr)
-                }
-            }
+            Pair::Number(_) => false,
+            Pair::Composite(l, r) => l.split() || r.split(),
         }
     }
 
-    fn add_left(self, n: u64) -> Pair {
+    fn add_left(&mut self, n: u64) {
         match self {
-            Self::Number(x) => Self::Number(x + n),
-            Self::Composite(a, b) => Self::Composite(Box::new(a.add_left(n)), b),
+            Self::Number(x) => *x += n,
+            Self::Composite(a, _) => a.add_left(n),
         }
     }
 
-    fn add_right(self, n: u64) -> Pair {
+    fn add_right(&mut self, n: u64) {
         match self {
-            Self::Number(x) => Self::Number(x + n),
-            Self::Composite(a, b) => Self::Composite(a, Box::new(b.add_right(n))),
+            Self::Number(x) => *x += n,
+            Self::Composite(_, b) => b.add_right(n),
         }
     }
 
-    fn reduce(mut self) -> Pair {
+    fn reduce(&mut self) {
         loop {
-            let (new, _, _, reduced_explode) = self.exploding_reduce(0);
-            self = new;
+            let (_, _, reduced_explode) = self.exploding_reduce(0);
             if reduced_explode {
                 continue;
             }
 
-            let (new, reduced_split) = self.split();
-            self = new;
+            let reduced_split = self.split();
             if reduced_split {
                 continue;
             }
 
-            break self;
+            break;
         }
     }
 
@@ -174,19 +163,17 @@ mod test {
 
     #[test]
     fn complete_reduce() {
-        assert_eq!(
-            parse_pair("[[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]]")
-                .reduce()
-                .to_string(),
-            "[[[[0,7],4],[[7,8],[6,0]]],[8,1]]"
-        );
+        let mut pair = parse_pair("[[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]]");
+        pair.reduce();
+        assert_eq!(pair.to_string(), "[[[[0,7],4],[[7,8],[6,0]]],[8,1]]");
     }
 
     #[test]
     fn explode() {
         macro_rules! test_explode {
             ($in:expr, $out:expr, $l:expr, $r:expr) => {
-                let (pair, left, right, reduced) = parse_pair($in).exploding_reduce(0);
+                let mut pair = parse_pair($in);
+                let (left, right, reduced) = pair.exploding_reduce(0);
                 assert!(reduced);
                 assert_eq!(pair.to_string(), $out);
                 assert_eq!(left, $l);
@@ -223,8 +210,9 @@ fn list_add(p: Vec<Pair>) -> Pair {
     let mut numbers = p.into_iter();
     let start = numbers.next().unwrap();
     numbers.fold(start, |current, pair| {
-        let next = Pair::Composite(Box::new(current), Box::new(pair));
-        next.reduce()
+        let mut next = Pair::Composite(Box::new(current), Box::new(pair));
+        next.reduce();
+        next
     })
 }
 
@@ -240,9 +228,9 @@ pub(crate) fn part2(numbers: Parsed) -> EyreResult<u64> {
             if ix == iy {
                 continue;
             }
-            let mag = Pair::Composite(Box::new(x.clone()), Box::new(y.clone()))
-                .reduce()
-                .magnitude();
+            let mut res = Pair::Composite(Box::new(x.clone()), Box::new(y.clone()));
+            res.reduce();
+            let mag = res.magnitude();
             if mag > max {
                 max = mag;
             }
