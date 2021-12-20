@@ -32,6 +32,7 @@ days! {
     17 = day17,
     18 = day18,
     19 = day19,
+    20 = day20,
 }
 
 #[derive(Debug)]
