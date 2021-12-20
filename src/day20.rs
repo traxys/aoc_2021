@@ -36,13 +36,6 @@ pub(crate) fn parser(input: &str) -> EyreResult<Parsed> {
     ))
 }
 
-fn reduce_bool<I>(iter: I) -> u16
-where
-    I: Iterator<Item = bool>,
-{
-    iter.fold(0, |curr, b| (curr << 1) | b as u16)
-}
-
 fn neighbours(x: i64, y: i64) -> [(i64, i64); 9] {
     [
         (x - 1, y - 1),
@@ -106,11 +99,12 @@ impl State {
 
         for x in (self.bounding.min_x - 1)..=(self.bounding.max_x + 1) {
             for y in (self.bounding.min_y - 1)..=(self.bounding.max_y + 1) {
-                let num = reduce_bool(
+                let num = {
                     neighbours(x, y)
                         .iter()
-                        .map(|c| self.coords.contains(&c) ^ self.inverted),
-                );
+                        .map(|c| self.coords.contains(&c) ^ self.inverted)
+                        .fold(0, |curr, b| (curr << 1) | b as u16)
+                };
                 if mapping[num as usize] ^ invert_mapping {
                     new_coords.insert((x, y));
                 }
