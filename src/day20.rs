@@ -60,19 +60,42 @@ fn neighbours(x: i64, y: i64) -> [(i64, i64); 9] {
 pub(crate) struct State {
     inverted: bool,
     coords: HashSet<(i64, i64)>,
+    bounding: BoundingBox,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct BoundingBox {
+    min_x: i64,
+    max_x: i64,
+    min_y: i64,
+    max_y: i64,
 }
 
 impl State {
     fn new(coords: HashSet<(i64, i64)>) -> Self {
         Self {
             inverted: false,
+            bounding: {
+                coords.iter().fold(
+                    BoundingBox {
+                        min_x: i64::MAX,
+                        max_x: i64::MIN,
+                        min_y: i64::MAX,
+                        max_y: i64::MIN,
+                    },
+                    |bounding, &(x, y)| BoundingBox {
+                        min_x: cmp::min(x, bounding.min_x),
+                        max_x: cmp::max(x, bounding.max_x),
+                        min_y: cmp::min(y, bounding.min_y),
+                        max_y: cmp::max(y, bounding.max_y),
+                    },
+                )
+            },
             coords,
         }
     }
 
     fn step(&self, mapping: &[bool; 512]) -> Self {
-        let bounding = bounding_box(&self.coords);
-
         let invert_mapping = if !self.inverted {
             mapping[0]
         } else {
@@ -81,8 +104,8 @@ impl State {
 
         let mut new_coords = HashSet::new();
 
-        for x in (bounding.min_x - 1)..=(bounding.max_x + 1) {
-            for y in (bounding.min_y - 1)..=(bounding.max_y + 1) {
+        for x in (self.bounding.min_x - 1)..=(self.bounding.max_x + 1) {
+            for y in (self.bounding.min_y - 1)..=(self.bounding.max_y + 1) {
                 let num = reduce_bool(
                     neighbours(x, y)
                         .iter()
@@ -94,14 +117,21 @@ impl State {
             }
         }
 
+        let mut new_bounding = self.bounding;
+        new_bounding.min_x -= 1;
+        new_bounding.max_x += 1;
+        new_bounding.min_y -= 1;
+        new_bounding.max_y += 1;
+
         Self {
             inverted: invert_mapping,
             coords: new_coords,
+            bounding: new_bounding,
         }
     }
 
     /* fn print(&self) {
-        let b = self.bounding();
+        let b = self.bounding;
         let (contained, not_contained) = if self.inverted {
             ('.', '#')
         } else {
@@ -127,31 +157,6 @@ impl State {
             Some(self.coords.len())
         }
     }
-}
-
-#[derive(Debug)]
-struct BoundingBox {
-    min_x: i64,
-    max_x: i64,
-    min_y: i64,
-    max_y: i64,
-}
-
-fn bounding_box(input: &HashSet<(i64, i64)>) -> BoundingBox {
-    input.iter().fold(
-        BoundingBox {
-            min_x: i64::MAX,
-            max_x: i64::MIN,
-            min_y: i64::MAX,
-            max_y: i64::MIN,
-        },
-        |bounding, &(x, y)| BoundingBox {
-            min_x: cmp::min(x, bounding.min_x),
-            max_x: cmp::max(x, bounding.max_x),
-            min_y: cmp::min(y, bounding.min_y),
-            max_y: cmp::max(y, bounding.max_y),
-        },
-    )
 }
 
 pub(crate) fn part1((mapping, state): Parsed) -> EyreResult<usize> {
