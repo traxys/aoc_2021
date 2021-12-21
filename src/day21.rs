@@ -1,8 +1,10 @@
 use crate::{day, utils::split2, EyreResult};
+use std::collections::HashMap;
 
 day! {
     parser,
-    part1 => "Score with deterministic dice {}",
+    part1 => "Score with deterministic dice: {}",
+    part2 => "Wins with dirac dice: {}",
 }
 
 #[derive(Debug)]
@@ -144,6 +146,151 @@ pub(crate) fn part1(mut state: Parsed) -> EyreResult<u64> {
     })
 }
 
-pub(crate) fn part2(_: Parsed) -> EyreResult<()> {
-    todo!()
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+struct Situation {
+    score1: u8,
+    score2: u8,
+    pos1: u8,
+    pos2: u8,
+}
+
+fn score_next(die: u8, pos: u8) -> (u8, u8) {
+    let next = (pos + die) % 10;
+    let score = next + 1;
+    (next, score)
+}
+
+impl Situation {
+    fn is_win(&self) -> bool {
+        self.win1() || self.win2()
+    }
+
+    fn win1(&self) -> bool {
+        self.score1 >= 21
+    }
+
+    fn win2(&self) -> bool {
+        self.score2 >= 21
+    }
+
+    fn play1(self, roll: u8) -> Self {
+        let (next, score) = score_next(roll, self.pos1);
+        let mut new = self;
+        new.pos1 = next;
+        new.score1 += score;
+        new
+    }
+
+    fn dirac1(self) -> [(Situation, usize); 7] {
+        [
+            (self.play1(3), 1),
+            (self.play1(4), 3),
+            (self.play1(5), 6),
+            (self.play1(6), 7),
+            (self.play1(7), 6),
+            (self.play1(8), 3),
+            (self.play1(9), 1),
+        ]
+    }
+
+    fn play2(self, roll: u8) -> Self {
+        let (next, score) = score_next(roll, self.pos2);
+        let mut new = self;
+        new.pos2 = next;
+        new.score2 += score;
+        new
+    }
+
+    fn dirac2(self) -> [(Situation, usize); 7] {
+        [
+            (self.play2(3), 1),
+            (self.play2(4), 3),
+            (self.play2(5), 6),
+            (self.play2(6), 7),
+            (self.play2(7), 6),
+            (self.play2(8), 3),
+            (self.play2(9), 1),
+        ]
+    }
+}
+
+struct DiracState {
+    situations: HashMap<Situation, usize>,
+}
+
+impl DiracState {
+    fn new(initial: State) -> Self {
+        let mut situations = HashMap::new();
+
+        situations.insert(
+            Situation {
+                score1: 0,
+                score2: 0,
+                pos1: initial.player1,
+                pos2: initial.player2,
+            },
+            1,
+        );
+
+        Self { situations }
+    }
+
+    fn step(&mut self, player1: bool) -> bool {
+        let mut new_situations = HashMap::with_capacity(self.situations.len() * 3);
+
+        let mut all_win = true;
+
+        for (&situation, &count) in self.situations.iter() {
+            if situation.is_win() {
+                *new_situations.entry(situation).or_insert(0) += count;
+            } else {
+                let situations = if player1 {
+                    situation.dirac1()
+                } else {
+                    situation.dirac2()
+                };
+
+                for (situation, repeat) in situations {
+                    *new_situations.entry(situation).or_insert(0) += repeat * count;
+                }
+
+                all_win = false;
+            }
+        }
+
+        self.situations = new_situations;
+        all_win
+    }
+
+    fn run(&mut self) {
+        let mut player1 = true;
+        loop {
+            if self.step(player1) {
+                return;
+            }
+
+            player1 = !player1;
+        }
+    }
+
+    fn count_wins(&self) -> (usize, usize) {
+        self.situations
+            .iter()
+            .fold((0, 0), |(win1, win2), (situation, count)| {
+                assert!(situation.is_win());
+                if situation.win1() {
+                    assert!(!situation.win2());
+                    (win1 + count, win2)
+                } else {
+                    (win1, win2 + count)
+                }
+            })
+    }
+}
+
+pub(crate) fn part2(state: Parsed) -> EyreResult<usize> {
+    let mut dirac_state = DiracState::new(state);
+    dirac_state.run();
+    let (win1, win2) = dirac_state.count_wins();
+    Ok(std::cmp::max(win1, win2))
 }
