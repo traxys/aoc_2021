@@ -4,7 +4,8 @@ use crate::{day, EyreResult};
 
 day! {
     parser,
-    part1 => "{}",
+    part1 => "Path score is {}",
+    part2 => "Path score is {}",
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash)]
@@ -73,7 +74,26 @@ impl<const N: usize> Default for Board<N> {
     }
 }
 
-fn a_star<const N: usize>(start: Board<N>) -> u64 {
+fn a_star<const N: usize>(start: Board<N>) -> (u64, Vec<Board<N>>) {
+    fn reconstruct_path<const N: usize>(
+        come_from: &HashMap<Board<N>, Board<N>>,
+        mut current: Board<N>,
+    ) -> Vec<Board<N>> {
+        let mut total_path = vec![current];
+        loop {
+            match come_from.get(&current) {
+                None => {
+                    total_path.reverse();
+                    return total_path;
+                }
+                Some(v) => {
+                    current = *v;
+                    total_path.push(current);
+                }
+            }
+        }
+    }
+
     #[derive(PartialEq, Eq)]
     struct Path<const N: usize> {
         board: Board<N>,
@@ -106,6 +126,8 @@ fn a_star<const N: usize>(start: Board<N>) -> u64 {
         board: start,
     });
 
+    let mut come_from = HashMap::new();
+
     let mut g_scores = HashMap::new();
     g_scores.insert(start, 0);
 
@@ -114,8 +136,12 @@ fn a_star<const N: usize>(start: Board<N>) -> u64 {
 
     while !paths.is_empty() {
         let best = paths.pop().unwrap();
+
         if best.board == goal {
-            return *g_scores.get(&best.board).unwrap();
+            return (
+                *g_scores.get(&best.board).unwrap(),
+                reconstruct_path(&come_from, goal),
+            );
         }
 
         if let Some(&f) = f_scores.get(&best.board) {
@@ -143,6 +169,7 @@ fn a_star<const N: usize>(start: Board<N>) -> u64 {
                 f_score,
                 board: neigh,
             });
+            come_from.insert(neigh, best.board);
         }
     }
 
@@ -178,7 +205,14 @@ impl<const N: usize> Board<N> {
             let rooms = self.rooms();
 
             for (mut room, ty, pos) in rooms {
-                if can_go_in_room(room, ty, amphi) {
+                let range = if p < pos {
+                    (p + 1)..=pos
+                } else {
+                    pos..=(p - 1)
+                };
+                if can_go_in_room(room, ty, amphi)
+                    && self.hall[range].iter().all(|&p| p == Amphipod::None)
+                {
                     let mut new_board = *self;
                     new_board.hall[p] = Amphipod::None;
 
@@ -231,11 +265,7 @@ impl<const N: usize> Board<N> {
 
             let mut target_room = room;
 
-            let first_non_free = match room
-                .iter()
-                .enumerate()
-                .skip_while(|&(_, &a)| a == Amphipod::None)
-                .next()
+            let first_non_free = match room.iter().enumerate().find(|&(_, &a)| a != Amphipod::None)
             {
                 None => continue,
                 Some((i, _)) => i,
@@ -249,7 +279,8 @@ impl<const N: usize> Board<N> {
                     (first_non_free + 1, room[first_non_free])
                 }
             } else {
-                if room[first_non_free + 1..].iter().any(|&r| r != ty) {
+                if room[first_non_free] != ty || room[first_non_free + 1..].iter().any(|&r| r != ty)
+                {
                     target_room[first_non_free] = Amphipod::None;
                     (first_non_free + 1, room[first_non_free])
                 } else {
@@ -392,9 +423,27 @@ pub(crate) fn parser(input: &str) -> EyreResult<Parsed> {
 }
 
 pub(crate) fn part1(board: Parsed) -> EyreResult<u64> {
-    Ok(a_star(board))
+    Ok(a_star(board).0)
 }
 
-pub(crate) fn part2(_: Parsed) -> EyreResult<()> {
-    todo!()
+pub(crate) fn part2(board: Parsed) -> EyreResult<u64> {
+    use Amphipod::*;
+
+    let a_room = [board.a_room[0], D, D, board.a_room[1]];
+    let b_room = [board.b_room[0], C, B, board.b_room[1]];
+    let c_room = [board.c_room[0], B, A, board.c_room[1]];
+    let d_room = [board.d_room[0], A, C, board.d_room[1]];
+
+    let board = Board {
+        hall: board.hall,
+        a_room,
+        b_room,
+        c_room,
+        d_room,
+    };
+    let (score, _) = a_star(board);
+    /* for p in path {
+        println!("STEP:\n{}", p);
+    } */
+    Ok(score)
 }
